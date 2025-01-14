@@ -1,0 +1,1366 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/MarkerCluster.css">
+        <link rel="stylesheet" href="css/MarkerCluster.Default.css">
+        <link rel="stylesheet" href="css/leaflet-search.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <style>
+        #map {
+            width: 407px;
+            height: 980px;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/leaflet.markercluster.js"></script>
+        <script src="js/leaflet-search.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/ne_10m_airports_1.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
+              highlightLayer.setStyle({
+                color: '#ffff00',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#ffff00',
+                fillOpacity: 1
+              });
+            }
+        }
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[-203.21625763861488,-82.36979052939014],[245.99680778723587,103.65402490769529]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_OSMStandard_0');
+        map.getPane('pane_OSMStandard_0').style.zIndex = 400;
+        var layer_OSMStandard_0 = L.tileLayer('http://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OSMStandard_0',
+            opacity: 1.0,
+            attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, CC-BY-SA</a>',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OSMStandard_0;
+        map.addLayer(layer_OSMStandard_0);
+        function pop_ne_10m_airports_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name'] !== null ? autolinker.link(feature.properties['name'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['iata_code'] !== null ? autolinker.link(feature.properties['iata_code'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['wikipedia'] !== null ? autolinker.link(feature.properties['wikipedia'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['comments'] !== null ? autolinker.link(feature.properties['comments'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['wikidataid'] !== null ? autolinker.link(feature.properties['wikidataid'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_ar'] !== null ? autolinker.link(feature.properties['name_ar'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_bn'] !== null ? autolinker.link(feature.properties['name_bn'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_de'] !== null ? autolinker.link(feature.properties['name_de'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_en'] !== null ? autolinker.link(feature.properties['name_en'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_es'] !== null ? autolinker.link(feature.properties['name_es'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_fr'] !== null ? autolinker.link(feature.properties['name_fr'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_el'] !== null ? autolinker.link(feature.properties['name_el'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_hi'] !== null ? autolinker.link(feature.properties['name_hi'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_hu'] !== null ? autolinker.link(feature.properties['name_hu'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_id'] !== null ? autolinker.link(feature.properties['name_id'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_it'] !== null ? autolinker.link(feature.properties['name_it'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_ja'] !== null ? autolinker.link(feature.properties['name_ja'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_ko'] !== null ? autolinker.link(feature.properties['name_ko'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_nl'] !== null ? autolinker.link(feature.properties['name_nl'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_pl'] !== null ? autolinker.link(feature.properties['name_pl'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_pt'] !== null ? autolinker.link(feature.properties['name_pt'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_ru'] !== null ? autolinker.link(feature.properties['name_ru'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_sv'] !== null ? autolinker.link(feature.properties['name_sv'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_tr'] !== null ? autolinker.link(feature.properties['name_tr'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_vi'] !== null ? autolinker.link(feature.properties['name_vi'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_zh'] !== null ? autolinker.link(feature.properties['name_zh'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['wdid_score'] !== null ? autolinker.link(feature.properties['wdid_score'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ne_id'] !== null ? autolinker.link(feature.properties['ne_id'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_fa'] !== null ? autolinker.link(feature.properties['name_fa'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_he'] !== null ? autolinker.link(feature.properties['name_he'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_uk'] !== null ? autolinker.link(feature.properties['name_uk'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_ur'] !== null ? autolinker.link(feature.properties['name_ur'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_zht'] !== null ? autolinker.link(feature.properties['name_zht'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['class'] !== null ? autolinker.link(feature.properties['class'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_ne_10m_airports_1_0(feature) {
+            switch(String(feature.properties['class'])) {
+                case 'Major Airp':
+                    return {
+                pane: 'pane_ne_10m_airports_1',
+                radius: 4.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,194,216,1.0)',
+                interactive: false,
+            }
+                    break;
+                case 'Mid Airpor':
+                    return {
+                pane: 'pane_ne_10m_airports_1',
+                radius: 3.6,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(253,255,145,1.0)',
+                interactive: false,
+            }
+                    break;
+                case 'Small Airp':
+                    return {
+                pane: 'pane_ne_10m_airports_1',
+                radius: 4.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,6,238,1.0)',
+                interactive: false,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_ne_10m_airports_1');
+        map.getPane('pane_ne_10m_airports_1').style.zIndex = 401;
+        map.getPane('pane_ne_10m_airports_1').style['mix-blend-mode'] = 'normal';
+        var layer_ne_10m_airports_1 = new L.geoJson(json_ne_10m_airports_1, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_ne_10m_airports_1',
+            layerName: 'layer_ne_10m_airports_1',
+            pane: 'pane_ne_10m_airports_1',
+            onEachFeature: pop_ne_10m_airports_1,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_ne_10m_airports_1_0(feature));
+            },
+        });
+        var cluster_ne_10m_airports_1 = new L.MarkerClusterGroup({showCoverageOnHover: false,
+            spiderfyDistanceMultiplier: 2});
+        cluster_ne_10m_airports_1.addLayer(layer_ne_10m_airports_1);
+
+        bounds_group.addLayer(layer_ne_10m_airports_1);
+        cluster_ne_10m_airports_1.addTo(map);
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        setBounds();
+        map.addControl(new L.Control.Search({
+            layer: cluster_ne_10m_airports_1,
+            initial: false,
+            hideMarkerOnCollapse: true,
+            propertyName: 'name'}));
+        document.getElementsByClassName('search-button')[0].className +=
+         ' fa fa-binoculars';
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"name_en": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_name_en = document.createElement('div');
+            div_name_en.id = "div_name_en";
+            div_name_en.className= "filterselect";
+            document.getElementById("menu").appendChild(div_name_en);
+            sel_name_en = document.createElement('select');
+            sel_name_en.multiple = true;
+            sel_name_en.size = 10;
+            sel_name_en.id = "sel_name_en";
+            var name_en_options_str = "<option value='' unselected></option>";
+            sel_name_en.onchange = function(){filterFunc()};
+            name_en_options_str  += '<option value="NULL">NULL</option>';
+            name_en_options_str  += '<option value="3rd Division Support Base">3rd Division Support Base</option>';
+            name_en_options_str  += '<option value="Aba Tenna Dejazmach Yilma International Airport">Aba Tenna Dejazmach Yilma International Airport</option>';
+            name_en_options_str  += '<option value="Abdul Rachman Saleh Airport">Abdul Rachman Saleh Airport</option>';
+            name_en_options_str  += '<option value="Abeid Amani Karume International Airport">Abeid Amani Karume International Airport</option>';
+            name_en_options_str  += '<option value="Abraham González Airport">Abraham González Airport</option>';
+            name_en_options_str  += '<option value="Abu Dhabi International Airport">Abu Dhabi International Airport</option>';
+            name_en_options_str  += '<option value="Achmad Yani International Airport">Achmad Yani International Airport</option>';
+            name_en_options_str  += '<option value="Adampur Air force base">Adampur Air force base</option>';
+            name_en_options_str  += '<option value="Adana Şakirpaşa Airport">Adana Şakirpaşa Airport</option>';
+            name_en_options_str  += '<option value="Addis Ababa Bole International Airport">Addis Ababa Bole International Airport</option>';
+            name_en_options_str  += '<option value="Adelaide Airport">Adelaide Airport</option>';
+            name_en_options_str  += '<option value="Aden Adde International Airport">Aden Adde International Airport</option>';
+            name_en_options_str  += '<option value="Aden International Airport">Aden International Airport</option>';
+            name_en_options_str  += '<option value="Adolfo Suarez Madrid-Barajas Airport">Adolfo Suarez Madrid-Barajas Airport</option>';
+            name_en_options_str  += '<option value="Afonso Pena International Airport">Afonso Pena International Airport</option>';
+            name_en_options_str  += '<option value="Agra Civil Enclave">Agra Civil Enclave</option>';
+            name_en_options_str  += '<option value="Ahvaz International Airport">Ahvaz International Airport</option>';
+            name_en_options_str  += '<option value="Albano Machado Airport">Albano Machado Airport</option>';
+            name_en_options_str  += '<option value="Albany International Airport">Albany International Airport</option>';
+            name_en_options_str  += '<option value="Albenga Airport-Riviera Airport">Albenga Airport-Riviera Airport</option>';
+            name_en_options_str  += '<option value="Albuquerque International Sunport">Albuquerque International Sunport</option>';
+            name_en_options_str  += '<option value="Alejandro Velasco Astete International Airport">Alejandro Velasco Astete International Airport</option>';
+            name_en_options_str  += '<option value="Aleppo International Airport">Aleppo International Airport</option>';
+            name_en_options_str  += '<option value="Alfonso Bonilla Aragón International Airport">Alfonso Bonilla Aragón International Airport</option>';
+            name_en_options_str  += '<option value="Algiers Houari Boumediene Airport">Algiers Houari Boumediene Airport</option>';
+            name_en_options_str  += '<option value="Alicante Airport">Alicante Airport</option>';
+            name_en_options_str  += '<option value="Alice Springs Airport">Alice Springs Airport</option>';
+            name_en_options_str  += '<option value="Allahabad Airport">Allahabad Airport</option>';
+            name_en_options_str  += '<option value="Allama Iqbal International Airport">Allama Iqbal International Airport</option>';
+            name_en_options_str  += '<option value="Almaty International Airport">Almaty International Airport</option>';
+            name_en_options_str  += '<option value="Almería Airport">Almería Airport</option>';
+            name_en_options_str  += '<option value="Amman Civil Airport">Amman Civil Airport</option>';
+            name_en_options_str  += '<option value="Amsterdam Airport Schiphol">Amsterdam Airport Schiphol</option>';
+            name_en_options_str  += '<option value="Amílcar Cabral International Airport">Amílcar Cabral International Airport</option>';
+            name_en_options_str  += '<option value="Andrés Sabella Airport">Andrés Sabella Airport</option>';
+            name_en_options_str  += '<option value="Ankara Esenboğa Airport">Ankara Esenboğa Airport</option>';
+            name_en_options_str  += '<option value="Annemasse Aerodrome">Annemasse Aerodrome</option>';
+            name_en_options_str  += '<option value="Antalya Airport">Antalya Airport</option>';
+            name_en_options_str  += '<option value="Antonio B. Won Pat International Airport">Antonio B. Won Pat International Airport</option>';
+            name_en_options_str  += '<option value="Antonio Maceo Airport">Antonio Maceo Airport</option>';
+            name_en_options_str  += '<option value="Antwerp International Airport">Antwerp International Airport</option>';
+            name_en_options_str  += '<option value="Arcata-Eureka Airport">Arcata-Eureka Airport</option>';
+            name_en_options_str  += '<option value="Arturo Merino Benítez International Airport">Arturo Merino Benítez International Airport</option>';
+            name_en_options_str  += '<option value="Arturo Michelena International Airport">Arturo Michelena International Airport</option>';
+            name_en_options_str  += '<option value="Ashgabat International Airport">Ashgabat International Airport</option>';
+            name_en_options_str  += '<option value="Asmara International Airport">Asmara International Airport</option>';
+            name_en_options_str  += '<option value="Assiut Airport">Assiut Airport</option>';
+            name_en_options_str  += '<option value="Astor Piazzolla International Airport">Astor Piazzolla International Airport</option>';
+            name_en_options_str  += '<option value="Aswan International Airport">Aswan International Airport</option>';
+            name_en_options_str  += '<option value="Atar International Airport">Atar International Airport</option>';
+            name_en_options_str  += '<option value="Atatürk International Airport">Atatürk International Airport</option>';
+            name_en_options_str  += '<option value="Athens International Airport">Athens International Airport</option>';
+            name_en_options_str  += '<option value="Auckland Airport">Auckland Airport</option>';
+            name_en_options_str  += '<option value="Augusto C. Sandino International Airport">Augusto C. Sandino International Airport</option>';
+            name_en_options_str  += '<option value="Augusto Severo International Airport">Augusto Severo International Airport</option>';
+            name_en_options_str  += '<option value="Aurangabad Airport">Aurangabad Airport</option>';
+            name_en_options_str  += '<option value="Aurel Vlaicu International Airport">Aurel Vlaicu International Airport</option>';
+            name_en_options_str  += '<option value="Austin-Bergstrom International Airport">Austin-Bergstrom International Airport</option>';
+            name_en_options_str  += '<option value="Bacha Khan International Airport">Bacha Khan International Airport</option>';
+            name_en_options_str  += '<option value="Baghdad International Airport">Baghdad International Airport</option>';
+            name_en_options_str  += '<option value="Bahrain International Airport">Bahrain International Airport</option>';
+            name_en_options_str  += '<option value="Baikonur Cosmodrome">Baikonur Cosmodrome</option>';
+            name_en_options_str  += '<option value="Baltimore/Washington International Thurgood Marshall Airport">Baltimore/Washington International Thurgood Marshall Airport</option>';
+            name_en_options_str  += '<option value="Bamako-Sénou International Airport">Bamako-Sénou International Airport</option>';
+            name_en_options_str  += '<option value="Bandar Abbas International Airport">Bandar Abbas International Airport</option>';
+            name_en_options_str  += '<option value="Bandaranaike International Airport">Bandaranaike International Airport</option>';
+            name_en_options_str  += '<option value="Bangoka International Airport">Bangoka International Airport</option>';
+            name_en_options_str  += '<option value="Bangui M&apos;Poko International Airport">Bangui M&apos;Poko International Airport</option>';
+            name_en_options_str  += '<option value="Banjul International Airport">Banjul International Airport</option>';
+            name_en_options_str  += '<option value="Bareilly Airport">Bareilly Airport</option>';
+            name_en_options_str  += '<option value="Barnaul Airport">Barnaul Airport</option>';
+            name_en_options_str  += '<option value="Basra International Airport">Basra International Airport</option>';
+            name_en_options_str  += '<option value="Bassel Al-Assad International Airport">Bassel Al-Assad International Airport</option>';
+            name_en_options_str  += '<option value="Bataysk Air Base">Bataysk Air Base</option>';
+            name_en_options_str  += '<option value="Baton Rouge Metropolitan Airport">Baton Rouge Metropolitan Airport</option>';
+            name_en_options_str  += '<option value="Bauerfield International Airport">Bauerfield International Airport</option>';
+            name_en_options_str  += '<option value="Beijing Capital International Airport">Beijing Capital International Airport</option>';
+            name_en_options_str  += '<option value="Beirut–Rafic Hariri International Airport">Beirut–Rafic Hariri International Airport</option>';
+            name_en_options_str  += '<option value="Belfast International Airport">Belfast International Airport</option>';
+            name_en_options_str  += '<option value="Belgrade Nikola Tesla Airport">Belgrade Nikola Tesla Airport</option>';
+            name_en_options_str  += '<option value="Ben Gurion Airport">Ben Gurion Airport</option>';
+            name_en_options_str  += '<option value="Benazir Bhutto International Airport">Benazir Bhutto International Airport</option>';
+            name_en_options_str  += '<option value="Benin Airport">Benin Airport</option>';
+            name_en_options_str  += '<option value="Benina International Airport">Benina International Airport</option>';
+            name_en_options_str  += '<option value="Bergen Airport">Bergen Airport</option>';
+            name_en_options_str  += '<option value="Berlin Tegel Airport">Berlin Tegel Airport</option>';
+            name_en_options_str  += '<option value="Bethel Airport">Bethel Airport</option>';
+            name_en_options_str  += '<option value="Biju Patnaik Airport">Biju Patnaik Airport</option>';
+            name_en_options_str  += '<option value="Bilbao Airport">Bilbao Airport</option>';
+            name_en_options_str  += '<option value="Bill and Hillary Clinton National Airport">Bill and Hillary Clinton National Airport</option>';
+            name_en_options_str  += '<option value="Billings Logan International Airport">Billings Logan International Airport</option>';
+            name_en_options_str  += '<option value="Birmingham Airport">Birmingham Airport</option>';
+            name_en_options_str  += '<option value="Birmingham-Shuttlesworth International Airport">Birmingham-Shuttlesworth International Airport</option>';
+            name_en_options_str  += '<option value="Birsa Munda Airport">Birsa Munda Airport</option>';
+            name_en_options_str  += '<option value="Bismarck Municipal Airport">Bismarck Municipal Airport</option>';
+            name_en_options_str  += '<option value="Blue Grass Airport">Blue Grass Airport</option>';
+            name_en_options_str  += '<option value="Boa Vista International Airport">Boa Vista International Airport</option>';
+            name_en_options_str  += '<option value="Boise Airport">Boise Airport</option>';
+            name_en_options_str  += '<option value="Bolshoye Savino Airport">Bolshoye Savino Airport</option>';
+            name_en_options_str  += '<option value="Bonriki International Airport">Bonriki International Airport</option>';
+            name_en_options_str  += '<option value="Boraldai Airport">Boraldai Airport</option>';
+            name_en_options_str  += '<option value="Bordeaux–Mérignac Airport">Bordeaux–Mérignac Airport</option>';
+            name_en_options_str  += '<option value="Borg El Arab Airport">Borg El Arab Airport</option>';
+            name_en_options_str  += '<option value="Boryspil International Airport">Boryspil International Airport</option>';
+            name_en_options_str  += '<option value="Bouaké Airport">Bouaké Airport</option>';
+            name_en_options_str  += '<option value="Bradley International Airport">Bradley International Airport</option>';
+            name_en_options_str  += '<option value="Brandon Municipal Airport">Brandon Municipal Airport</option>';
+            name_en_options_str  += '<option value="Brasília International Airport">Brasília International Airport</option>';
+            name_en_options_str  += '<option value="Bremen Airport">Bremen Airport</option>';
+            name_en_options_str  += '<option value="Brisbane Airport">Brisbane Airport</option>';
+            name_en_options_str  += '<option value="Bristol Airport">Bristol Airport</option>';
+            name_en_options_str  += '<option value="Broken Hill Airport">Broken Hill Airport</option>';
+            name_en_options_str  += '<option value="Broome International Airport">Broome International Airport</option>';
+            name_en_options_str  += '<option value="Brownsville/South Padre Island International Airport">Brownsville/South Padre Island International Airport</option>';
+            name_en_options_str  += '<option value="Brunei International Airport">Brunei International Airport</option>';
+            name_en_options_str  += '<option value="Brussels Airport">Brussels Airport</option>';
+            name_en_options_str  += '<option value="Brussels South Charleroi Airport">Brussels South Charleroi Airport</option>';
+            name_en_options_str  += '<option value="Budapest Ferenc Liszt International Airport">Budapest Ferenc Liszt International Airport</option>';
+            name_en_options_str  += '<option value="Buffalo Niagara International Airport">Buffalo Niagara International Airport</option>';
+            name_en_options_str  += '<option value="Bujumbura International Airport">Bujumbura International Airport</option>';
+            name_en_options_str  += '<option value="Burgas Airport">Burgas Airport</option>';
+            name_en_options_str  += '<option value="Burlington International Airport">Burlington International Airport</option>';
+            name_en_options_str  += '<option value="Burnpur Airport">Burnpur Airport</option>';
+            name_en_options_str  += '<option value="Cabo Frio International Airport">Cabo Frio International Airport</option>';
+            name_en_options_str  += '<option value="Cadjehoun Airport">Cadjehoun Airport</option>';
+            name_en_options_str  += '<option value="Cairns Airport">Cairns Airport</option>';
+            name_en_options_str  += '<option value="Cairo International Airport">Cairo International Airport</option>';
+            name_en_options_str  += '<option value="Calgary International Airport">Calgary International Airport</option>';
+            name_en_options_str  += '<option value="Calicut International Airport">Calicut International Airport</option>';
+            name_en_options_str  += '<option value="Campo Grande International Airport">Campo Grande International Airport</option>';
+            name_en_options_str  += '<option value="Canberra International Airport">Canberra International Airport</option>';
+            name_en_options_str  += '<option value="Cancún International Airport">Cancún International Airport</option>';
+            name_en_options_str  += '<option value="Cannes – Mandelieu Airport">Cannes – Mandelieu Airport</option>';
+            name_en_options_str  += '<option value="Cape Town International Airport">Cape Town International Airport</option>';
+            name_en_options_str  += '<option value="Cardiff Airport">Cardiff Airport</option>';
+            name_en_options_str  += '<option value="Carlos Rovirosa Pérez International Airport">Carlos Rovirosa Pérez International Airport</option>';
+            name_en_options_str  += '<option value="Carrasco International Airport">Carrasco International Airport</option>';
+            name_en_options_str  += '<option value="Carriel Sur International Airport">Carriel Sur International Airport</option>';
+            name_en_options_str  += '<option value="Casablanca-Anfa Airport">Casablanca-Anfa Airport</option>';
+            name_en_options_str  += '<option value="Cascais Municipal Aerodrome">Cascais Municipal Aerodrome</option>';
+            name_en_options_str  += '<option value="Casper–Natrona County International Airport">Casper–Natrona County International Airport</option>';
+            name_en_options_str  += '<option value="Cassidy International Airport">Cassidy International Airport</option>';
+            name_en_options_str  += '<option value="Catania-Fontanarossa Airport">Catania-Fontanarossa Airport</option>';
+            name_en_options_str  += '<option value="Cayenne – Félix Eboué Airport">Cayenne – Félix Eboué Airport</option>';
+            name_en_options_str  += '<option value="Chacalluta International Airport">Chacalluta International Airport</option>';
+            name_en_options_str  += '<option value="Chandigarh Airport">Chandigarh Airport</option>';
+            name_en_options_str  += '<option value="Changchun Longjia International Airport">Changchun Longjia International Airport</option>';
+            name_en_options_str  += '<option value="Changsha Huanghua International Airport">Changsha Huanghua International Airport</option>';
+            name_en_options_str  += '<option value="Charles Kirkconnell International Airport">Charles Kirkconnell International Airport</option>';
+            name_en_options_str  += '<option value="Charleston International Airport">Charleston International Airport</option>';
+            name_en_options_str  += '<option value="Charlotte/Douglas International Airport">Charlotte/Douglas International Airport</option>';
+            name_en_options_str  += '<option value="Charlottetown Airport">Charlottetown Airport</option>';
+            name_en_options_str  += '<option value="Chaudhary Charan Singh Airport">Chaudhary Charan Singh Airport</option>';
+            name_en_options_str  += '<option value="Cheddi Jagan International Airport">Cheddi Jagan International Airport</option>';
+            name_en_options_str  += '<option value="Chelyabinsk Airport">Chelyabinsk Airport</option>';
+            name_en_options_str  += '<option value="Chengdu Shuangliu International Airport">Chengdu Shuangliu International Airport</option>';
+            name_en_options_str  += '<option value="Chennai International Airport">Chennai International Airport</option>';
+            name_en_options_str  += '<option value="Cheongju International Airport">Cheongju International Airport</option>';
+            name_en_options_str  += '<option value="Chetumal International Airport">Chetumal International Airport</option>';
+            name_en_options_str  += '<option value="Chhatrapati Shivaji Maharaj International Airport">Chhatrapati Shivaji Maharaj International Airport</option>';
+            name_en_options_str  += '<option value="Chiang Mai International Airport">Chiang Mai International Airport</option>';
+            name_en_options_str  += '<option value="Chief Dawid Stuurman International Airport">Chief Dawid Stuurman International Airport</option>';
+            name_en_options_str  += '<option value="Chileka International Airport">Chileka International Airport</option>';
+            name_en_options_str  += '<option value="Chinggis Khaan International Airport">Chinggis Khaan International Airport</option>';
+            name_en_options_str  += '<option value="Chișinău International Airport">Chișinău International Airport</option>';
+            name_en_options_str  += '<option value="Chongqing Jiangbei International Airport">Chongqing Jiangbei International Airport</option>';
+            name_en_options_str  += '<option value="Christchurch International Airport">Christchurch International Airport</option>';
+            name_en_options_str  += '<option value="Chubu Centrair International Airport">Chubu Centrair International Airport</option>';
+            name_en_options_str  += '<option value="Churchill Airport">Churchill Airport</option>';
+            name_en_options_str  += '<option value="Chuuk International Airport">Chuuk International Airport</option>';
+            name_en_options_str  += '<option value="Châlons Vatry Airport">Châlons Vatry Airport</option>';
+            name_en_options_str  += '<option value="Cibao International Airport">Cibao International Airport</option>';
+            name_en_options_str  += '<option value="Cincinnati/Northern Kentucky International Airport">Cincinnati/Northern Kentucky International Airport</option>';
+            name_en_options_str  += '<option value="Clark International Airport">Clark International Airport</option>';
+            name_en_options_str  += '<option value="Cleveland Hopkins International Airport">Cleveland Hopkins International Airport</option>';
+            name_en_options_str  += '<option value="Cluj International Airport">Cluj International Airport</option>';
+            name_en_options_str  += '<option value="Cochin International Airport">Cochin International Airport</option>';
+            name_en_options_str  += '<option value="Cocos">Cocos</option>';
+            name_en_options_str  += '<option value="Coimbatore Airport">Coimbatore Airport</option>';
+            name_en_options_str  += '<option value="Coleman A. Young International Airport">Coleman A. Young International Airport</option>';
+            name_en_options_str  += '<option value="Cologne Bonn Airport">Cologne Bonn Airport</option>';
+            name_en_options_str  += '<option value="Colorado Springs Airport">Colorado Springs Airport</option>';
+            name_en_options_str  += '<option value="Columbia Metropolitan Airport">Columbia Metropolitan Airport</option>';
+            name_en_options_str  += '<option value="Comandante Armando Tola International Airport">Comandante Armando Tola International Airport</option>';
+            name_en_options_str  += '<option value="Conakry International Airport">Conakry International Airport</option>';
+            name_en_options_str  += '<option value="Congonhas-São Paulo Airport">Congonhas-São Paulo Airport</option>';
+            name_en_options_str  += '<option value="Copenhagen Airport">Copenhagen Airport</option>';
+            name_en_options_str  += '<option value="Corfu International Airport">Corfu International Airport</option>';
+            name_en_options_str  += '<option value="Cork Airport">Cork Airport</option>';
+            name_en_options_str  += '<option value="Corpus Christi International Airport">Corpus Christi International Airport</option>';
+            name_en_options_str  += '<option value="Corumbá International Airport">Corumbá International Airport</option>';
+            name_en_options_str  += '<option value="Cozumel International Airport">Cozumel International Airport</option>';
+            name_en_options_str  += '<option value="Da Nang International Airport">Da Nang International Airport</option>';
+            name_en_options_str  += '<option value="Daegu International Airport">Daegu International Airport</option>';
+            name_en_options_str  += '<option value="Dalian Zhoushuizi International Airport">Dalian Zhoushuizi International Airport</option>';
+            name_en_options_str  += '<option value="Dallas Love Field">Dallas Love Field</option>';
+            name_en_options_str  += '<option value="Dallas/Fort Worth International Airport">Dallas/Fort Worth International Airport</option>';
+            name_en_options_str  += '<option value="Damascus International Airport">Damascus International Airport</option>';
+            name_en_options_str  += '<option value="Dane County Regional Airport">Dane County Regional Airport</option>';
+            name_en_options_str  += '<option value="Daniel K. Inouye International Airport">Daniel K. Inouye International Airport</option>';
+            name_en_options_str  += '<option value="Darwin International Airport">Darwin International Airport</option>';
+            name_en_options_str  += '<option value="Dawson Creek Airport">Dawson Creek Airport</option>';
+            name_en_options_str  += '<option value="Dayton International Airport">Dayton International Airport</option>';
+            name_en_options_str  += '<option value="Deadhorse Airport">Deadhorse Airport</option>';
+            name_en_options_str  += '<option value="Deauville – Saint-Gatien Airport">Deauville – Saint-Gatien Airport</option>';
+            name_en_options_str  += '<option value="Del Bajío International Airport">Del Bajío International Airport</option>';
+            name_en_options_str  += '<option value="Del Norte International Airport">Del Norte International Airport</option>';
+            name_en_options_str  += '<option value="Denver International Airport">Denver International Airport</option>';
+            name_en_options_str  += '<option value="Deputado Luís Eduardo Magalhães International Airport">Deputado Luís Eduardo Magalhães International Airport</option>';
+            name_en_options_str  += '<option value="Des Moines International Airport">Des Moines International Airport</option>';
+            name_en_options_str  += '<option value="Detroit Metropolitan Wayne County Airport">Detroit Metropolitan Wayne County Airport</option>';
+            name_en_options_str  += '<option value="Devi Ahilyabai Holkar Airport">Devi Ahilyabai Holkar Airport</option>';
+            name_en_options_str  += '<option value="Dhamial Army Airbase">Dhamial Army Airbase</option>';
+            name_en_options_str  += '<option value="Diego Aracena International Airport">Diego Aracena International Airport</option>';
+            name_en_options_str  += '<option value="Diori Hamani International Airport">Diori Hamani International Airport</option>';
+            name_en_options_str  += '<option value="Djibouti-Ambouli International Airport">Djibouti-Ambouli International Airport</option>';
+            name_en_options_str  += '<option value="Dnipro International Airport">Dnipro International Airport</option>';
+            name_en_options_str  += '<option value="Doha International Airport">Doha International Airport</option>';
+            name_en_options_str  += '<option value="Domodedovo International Airport">Domodedovo International Airport</option>';
+            name_en_options_str  += '<option value="Don Mueang International Airport">Don Mueang International Airport</option>';
+            name_en_options_str  += '<option value="Donetsk International Airport">Donetsk International Airport</option>';
+            name_en_options_str  += '<option value="Dr. Babasaheb Ambedkar International Airport">Dr. Babasaheb Ambedkar International Airport</option>';
+            name_en_options_str  += '<option value="Dresden Airport">Dresden Airport</option>';
+            name_en_options_str  += '<option value="Dubai International Airport">Dubai International Airport</option>';
+            name_en_options_str  += '<option value="Dubbo City Regional Airport">Dubbo City Regional Airport</option>';
+            name_en_options_str  += '<option value="Dublin Airport">Dublin Airport</option>';
+            name_en_options_str  += '<option value="Dunedin International Airport">Dunedin International Airport</option>';
+            name_en_options_str  += '<option value="Durban International Airport">Durban International Airport</option>';
+            name_en_options_str  += '<option value="Dzaoudzi Pamandzi International Airport">Dzaoudzi Pamandzi International Airport</option>';
+            name_en_options_str  += '<option value="Düsseldorf Airport">Düsseldorf Airport</option>';
+            name_en_options_str  += '<option value="Edinburgh Airport">Edinburgh Airport</option>';
+            name_en_options_str  += '<option value="Edmonton City Centre Airport">Edmonton City Centre Airport</option>';
+            name_en_options_str  += '<option value="Edmonton International Airport">Edmonton International Airport</option>';
+            name_en_options_str  += '<option value="El Alto International Airport">El Alto International Airport</option>';
+            name_en_options_str  += '<option value="El Dorado International Airport Luis Carlos Galán Sarmiento">El Dorado International Airport Luis Carlos Galán Sarmiento</option>';
+            name_en_options_str  += '<option value="El Paso International Airport">El Paso International Airport</option>';
+            name_en_options_str  += '<option value="El Tepual Airport">El Tepual Airport</option>';
+            name_en_options_str  += '<option value="Eldoret International Airport">Eldoret International Airport</option>';
+            name_en_options_str  += '<option value="Elko Regional Airport">Elko Regional Airport</option>';
+            name_en_options_str  += '<option value="Ellison Onizuka Kona International Airport">Ellison Onizuka Kona International Airport</option>';
+            name_en_options_str  += '<option value="Eloy Alfaro International Airport">Eloy Alfaro International Airport</option>';
+            name_en_options_str  += '<option value="Enrique Malek International Airport">Enrique Malek International Airport</option>';
+            name_en_options_str  += '<option value="Ensenada Airport">Ensenada Airport</option>';
+            name_en_options_str  += '<option value="Entebbe International Airport">Entebbe International Airport</option>';
+            name_en_options_str  += '<option value="Eppley Airfield">Eppley Airfield</option>';
+            name_en_options_str  += '<option value="Erik Nielsen Whitehorse International Airport">Erik Nielsen Whitehorse International Airport</option>';
+            name_en_options_str  += '<option value="Ernesto Cortissoz International Airport">Ernesto Cortissoz International Airport</option>';
+            name_en_options_str  += '<option value="Eurico de Aguiar Salles Airport">Eurico de Aguiar Salles Airport</option>';
+            name_en_options_str  += '<option value="Exuma International Airport">Exuma International Airport</option>';
+            name_en_options_str  += '<option value="Faa&apos;a International Airport">Faa&apos;a International Airport</option>';
+            name_en_options_str  += '<option value="Fairbanks International Airport">Fairbanks International Airport</option>';
+            name_en_options_str  += '<option value="Faisalabad International Airport">Faisalabad International Airport</option>';
+            name_en_options_str  += '<option value="Falcone–Borsellino Airport">Falcone–Borsellino Airport</option>';
+            name_en_options_str  += '<option value="Faleolo International Airport">Faleolo International Airport</option>';
+            name_en_options_str  += '<option value="Falls International Airport">Falls International Airport</option>';
+            name_en_options_str  += '<option value="Federal de Bachigualato International Airport">Federal de Bachigualato International Airport</option>';
+            name_en_options_str  += '<option value="Fes-Saïss Airport">Fes-Saïss Airport</option>';
+            name_en_options_str  += '<option value="Flagstaff Pulliam Airport">Flagstaff Pulliam Airport</option>';
+            name_en_options_str  += '<option value="Florianópolis International Airport">Florianópolis International Airport</option>';
+            name_en_options_str  += '<option value="Fort Lauderdale–Hollywood International Airport">Fort Lauderdale–Hollywood International Airport</option>';
+            name_en_options_str  += '<option value="Fort McMurray International Airport">Fort McMurray International Airport</option>';
+            name_en_options_str  += '<option value="Fort Smith Airport">Fort Smith Airport</option>';
+            name_en_options_str  += '<option value="Fort St. John Airport">Fort St. John Airport</option>';
+            name_en_options_str  += '<option value="Fort Worth Meacham International Airport">Fort Worth Meacham International Airport</option>';
+            name_en_options_str  += '<option value="Foz do Iguaçu International Airport">Foz do Iguaçu International Airport</option>';
+            name_en_options_str  += '<option value="Francisco Bangoy International Airport">Francisco Bangoy International Airport</option>';
+            name_en_options_str  += '<option value="Francisco Sarabia International Airport">Francisco Sarabia International Airport</option>';
+            name_en_options_str  += '<option value="Francisco de Sá Carneiro Airport">Francisco de Sá Carneiro Airport</option>';
+            name_en_options_str  += '<option value="Frankfurt Airport">Frankfurt Airport</option>';
+            name_en_options_str  += '<option value="Fresno Yosemite International Airport">Fresno Yosemite International Airport</option>';
+            name_en_options_str  += '<option value="Fuaʻamotu International Airport">Fuaʻamotu International Airport</option>';
+            name_en_options_str  += '<option value="Fukuoka Airport">Fukuoka Airport</option>';
+            name_en_options_str  += '<option value="Funafuti International Airport">Funafuti International Airport</option>';
+            name_en_options_str  += '<option value="Fuzhou Changle International Airport">Fuzhou Changle International Airport</option>';
+            name_en_options_str  += '<option value="Gander International Airport">Gander International Airport</option>';
+            name_en_options_str  += '<option value="Gandhinagar Airport">Gandhinagar Airport</option>';
+            name_en_options_str  += '<option value="Garoua International Airport">Garoua International Airport</option>';
+            name_en_options_str  += '<option value="Gary/Chicago International Airport">Gary/Chicago International Airport</option>';
+            name_en_options_str  += '<option value="Gatwick Airport">Gatwick Airport</option>';
+            name_en_options_str  += '<option value="Gdańsk Lech Wałęsa Airport">Gdańsk Lech Wałęsa Airport</option>';
+            name_en_options_str  += '<option value="General Francisco Javier Mina International Airport">General Francisco Javier Mina International Airport</option>';
+            name_en_options_str  += '<option value="General Guadalupe Victoria International Airport">General Guadalupe Victoria International Airport</option>';
+            name_en_options_str  += '<option value="General Heriberto Jara International Airport">General Heriberto Jara International Airport</option>';
+            name_en_options_str  += '<option value="General Ignacio Pesqueira García International Airport">General Ignacio Pesqueira García International Airport</option>';
+            name_en_options_str  += '<option value="General José María Yáñez International Airport">General José María Yáñez International Airport</option>';
+            name_en_options_str  += '<option value="General Juan N. Álvarez International Airport">General Juan N. Álvarez International Airport</option>';
+            name_en_options_str  += '<option value="General Rafael Buelna International Airport">General Rafael Buelna International Airport</option>';
+            name_en_options_str  += '<option value="General Roberto Fierro Villalobos International Airport">General Roberto Fierro Villalobos International Airport</option>';
+            name_en_options_str  += '<option value="General Rodolfo Sánchez Taboada International Airport">General Rodolfo Sánchez Taboada International Airport</option>';
+            name_en_options_str  += '<option value="General Servando Canales International Airport">General Servando Canales International Airport</option>';
+            name_en_options_str  += '<option value="Geneva International Airport">Geneva International Airport</option>';
+            name_en_options_str  += '<option value="George Bush Intercontinental Airport">George Bush Intercontinental Airport</option>';
+            name_en_options_str  += '<option value="Gerald R. Ford International Airport">Gerald R. Ford International Airport</option>';
+            name_en_options_str  += '<option value="Gibraltar International Airport">Gibraltar International Airport</option>';
+            name_en_options_str  += '<option value="Gimhae International Airport">Gimhae International Airport</option>';
+            name_en_options_str  += '<option value="Gimpo International Airport">Gimpo International Airport</option>';
+            name_en_options_str  += '<option value="Glasgow Airport">Glasgow Airport</option>';
+            name_en_options_str  += '<option value="Glasgow Prestwick Airport">Glasgow Prestwick Airport</option>';
+            name_en_options_str  += '<option value="Gobernador Horacio Guzmán International Airport">Gobernador Horacio Guzmán International Airport</option>';
+            name_en_options_str  += '<option value="Gold Coast Airport">Gold Coast Airport</option>';
+            name_en_options_str  += '<option value="Golosón International Airport">Golosón International Airport</option>';
+            name_en_options_str  += '<option value="Goma International Airport">Goma International Airport</option>';
+            name_en_options_str  += '<option value="Gothenburg-Landvetter Airport">Gothenburg-Landvetter Airport</option>';
+            name_en_options_str  += '<option value="Governador Jorge Teixeira de Oliveira International Airport">Governador Jorge Teixeira de Oliveira International Airport</option>';
+            name_en_options_str  += '<option value="Governor Francisco Gabrielli International Airport">Governor Francisco Gabrielli International Airport</option>';
+            name_en_options_str  += '<option value="Gran Canaria Airport">Gran Canaria Airport</option>';
+            name_en_options_str  += '<option value="Grand Bahama International Airport">Grand Bahama International Airport</option>';
+            name_en_options_str  += '<option value="Grantley Adams International Airport">Grantley Adams International Airport</option>';
+            name_en_options_str  += '<option value="Great Falls International Airport">Great Falls International Airport</option>';
+            name_en_options_str  += '<option value="Greater Moncton International Airport">Greater Moncton International Airport</option>';
+            name_en_options_str  += '<option value="Greater Rochester International Airport">Greater Rochester International Airport</option>';
+            name_en_options_str  += '<option value="Guangzhou Baiyun International Airport">Guangzhou Baiyun International Airport</option>';
+            name_en_options_str  += '<option value="Guaraní International Airport">Guaraní International Airport</option>';
+            name_en_options_str  += '<option value="Guiana Space Centre">Guiana Space Centre</option>';
+            name_en_options_str  += '<option value="Guilin Liangjiang International Airport">Guilin Liangjiang International Airport</option>';
+            name_en_options_str  += '<option value="Gwalior Airport">Gwalior Airport</option>';
+            name_en_options_str  += '<option value="Gwangju Airport">Gwangju Airport</option>';
+            name_en_options_str  += '<option value="Halifax Stanfield International Airport">Halifax Stanfield International Airport</option>';
+            name_en_options_str  += '<option value="Hamburg Airport">Hamburg Airport</option>';
+            name_en_options_str  += '<option value="Hamid Karzai International Airport">Hamid Karzai International Airport</option>';
+            name_en_options_str  += '<option value="Hamilton International Airport">Hamilton International Airport</option>';
+            name_en_options_str  += '<option value="Hangzhou Xiaoshan International Airport">Hangzhou Xiaoshan International Airport</option>';
+            name_en_options_str  += '<option value="Harare International Airport">Harare International Airport</option>';
+            name_en_options_str  += '<option value="Harbin Taiping International Airport">Harbin Taiping International Airport</option>';
+            name_en_options_str  += '<option value="Hartsfield–Jackson Atlanta International Airport">Hartsfield–Jackson Atlanta International Airport</option>';
+            name_en_options_str  += '<option value="Hat Yai International Airport">Hat Yai International Airport</option>';
+            name_en_options_str  += '<option value="Hato International Airport">Hato International Airport</option>';
+            name_en_options_str  += '<option value="Heathrow Airport">Heathrow Airport</option>';
+            name_en_options_str  += '<option value="Hector International Airport">Hector International Airport</option>';
+            name_en_options_str  += '<option value="Hefei Luogang International Airport">Hefei Luogang International Airport</option>';
+            name_en_options_str  += '<option value="Helena Regional Airport">Helena Regional Airport</option>';
+            name_en_options_str  += '<option value="Helsinki Airport">Helsinki Airport</option>';
+            name_en_options_str  += '<option value="Helsinki-Malmi Airport">Helsinki-Malmi Airport</option>';
+            name_en_options_str  += '<option value="Heraklion International Airport">Heraklion International Airport</option>';
+            name_en_options_str  += '<option value="Hermanos Serdán International Airport">Hermanos Serdán International Airport</option>';
+            name_en_options_str  += '<option value="Hewanorra International Airport">Hewanorra International Airport</option>';
+            name_en_options_str  += '<option value="Heydar Aliyev International Airport">Heydar Aliyev International Airport</option>';
+            name_en_options_str  += '<option value="Hilo International Airport">Hilo International Airport</option>';
+            name_en_options_str  += '<option value="Hindan Air Force Station">Hindan Air Force Station</option>';
+            name_en_options_str  += '<option value="Hiroshima-Nishi Airport">Hiroshima-Nishi Airport</option>';
+            name_en_options_str  += '<option value="Hobart Airport">Hobart Airport</option>';
+            name_en_options_str  += '<option value="Hodeida International Airport">Hodeida International Airport</option>';
+            name_en_options_str  += '<option value="Hohhot Baita International Airport">Hohhot Baita International Airport</option>';
+            name_en_options_str  += '<option value="Hong Kong International Airport">Hong Kong International Airport</option>';
+            name_en_options_str  += '<option value="Honiara International Airport">Honiara International Airport</option>';
+            name_en_options_str  += '<option value="Hotan Airport">Hotan Airport</option>';
+            name_en_options_str  += '<option value="Hubli Airport">Hubli Airport</option>';
+            name_en_options_str  += '<option value="Huntsville International Airport">Huntsville International Airport</option>';
+            name_en_options_str  += '<option value="Hurghada International Airport">Hurghada International Airport</option>';
+            name_en_options_str  += '<option value="Husein Sastranegara International Airport">Husein Sastranegara International Airport</option>';
+            name_en_options_str  += '<option value="Ibadan Airport">Ibadan Airport</option>';
+            name_en_options_str  += '<option value="Ignacio Agramonte International Airport">Ignacio Agramonte International Airport</option>';
+            name_en_options_str  += '<option value="Il Caravaggio International Airport">Il Caravaggio International Airport</option>';
+            name_en_options_str  += '<option value="Ilorin International Airport">Ilorin International Airport</option>';
+            name_en_options_str  += '<option value="Imperial County Airport">Imperial County Airport</option>';
+            name_en_options_str  += '<option value="Incheon International Airport">Incheon International Airport</option>';
+            name_en_options_str  += '<option value="Indianapolis International Airport">Indianapolis International Airport</option>';
+            name_en_options_str  += '<option value="Indira Gandhi International Airport">Indira Gandhi International Airport</option>';
+            name_en_options_str  += '<option value="Ing. Alberto Acuña Ongay International Airport">Ing. Alberto Acuña Ongay International Airport</option>';
+            name_en_options_str  += '<option value="Ingeniero Aeronáutico Ambrosio L.V. Taravella International Airport">Ingeniero Aeronáutico Ambrosio L.V. Taravella International Airport</option>';
+            name_en_options_str  += '<option value="International airport of Ndjili">International airport of Ndjili</option>';
+            name_en_options_str  += '<option value="Inverness Airport">Inverness Airport</option>';
+            name_en_options_str  += '<option value="Iqaluit Airport">Iqaluit Airport</option>';
+            name_en_options_str  += '<option value="Irkutsk International Airport">Irkutsk International Airport</option>';
+            name_en_options_str  += '<option value="Irkutsk Northwest Airport">Irkutsk Northwest Airport</option>';
+            name_en_options_str  += '<option value="Isfahan International Airport">Isfahan International Airport</option>';
+            name_en_options_str  += '<option value="Istanbul Sabiha Gökçen International Airport">Istanbul Sabiha Gökçen International Airport</option>';
+            name_en_options_str  += '<option value="Ivato Airport">Ivato Airport</option>';
+            name_en_options_str  += '<option value="JAGS McCartney International Airport">JAGS McCartney International Airport</option>';
+            name_en_options_str  += '<option value="Jabalpur Airport">Jabalpur Airport</option>';
+            name_en_options_str  += '<option value="Jacinto Lara International Airport">Jacinto Lara International Airport</option>';
+            name_en_options_str  += '<option value="Jackson-Evers International Airport">Jackson-Evers International Airport</option>';
+            name_en_options_str  += '<option value="Jacksons International Airport">Jacksons International Airport</option>';
+            name_en_options_str  += '<option value="Jacksonville International Airport">Jacksonville International Airport</option>';
+            name_en_options_str  += '<option value="Jaipur International Airport">Jaipur International Airport</option>';
+            name_en_options_str  += '<option value="Jammu Airport">Jammu Airport</option>';
+            name_en_options_str  += '<option value="Jeju International Airport">Jeju International Airport</option>';
+            name_en_options_str  += '<option value="Jiamusi Dongjiao Airport">Jiamusi Dongjiao Airport</option>';
+            name_en_options_str  += '<option value="Jinnah International Airport">Jinnah International Airport</option>';
+            name_en_options_str  += '<option value="Jodhpur Airport">Jodhpur Airport</option>';
+            name_en_options_str  += '<option value="Johan Adolf Pengel International Airport">Johan Adolf Pengel International Airport</option>';
+            name_en_options_str  += '<option value="John C. Munro Hamilton International Airport">John C. Munro Hamilton International Airport</option>';
+            name_en_options_str  += '<option value="John F. Kennedy International Airport">John F. Kennedy International Airport</option>';
+            name_en_options_str  += '<option value="John Glenn Columbus International Airport">John Glenn Columbus International Airport</option>';
+            name_en_options_str  += '<option value="John Paul II International Airport Kraków-Balice">John Paul II International Airport Kraków-Balice</option>';
+            name_en_options_str  += '<option value="John Wayne Airport">John Wayne Airport</option>';
+            name_en_options_str  += '<option value="Joinville-Lauro Carneiro de Loyola Airport">Joinville-Lauro Carneiro de Loyola Airport</option>';
+            name_en_options_str  += '<option value="Jomo Kenyatta International Airport">Jomo Kenyatta International Airport</option>';
+            name_en_options_str  += '<option value="Jorge Chávez International Airport">Jorge Chávez International Airport</option>';
+            name_en_options_str  += '<option value="Josep Tarradellas Airport Barcelona-El Prat">Josep Tarradellas Airport Barcelona-El Prat</option>';
+            name_en_options_str  += '<option value="Joshua Mqabuko Nkomo International Airport">Joshua Mqabuko Nkomo International Airport</option>';
+            name_en_options_str  += '<option value="José Joaquín de Olmedo International Airport">José Joaquín de Olmedo International Airport</option>';
+            name_en_options_str  += '<option value="José Martí International Airport">José Martí International Airport</option>';
+            name_en_options_str  += '<option value="José María Córdova International Airport">José María Córdova International Airport</option>';
+            name_en_options_str  += '<option value="João Paulo II Airport">João Paulo II Airport</option>';
+            name_en_options_str  += '<option value="Juan Gualberto Gómez Airport">Juan Gualberto Gómez Airport</option>';
+            name_en_options_str  += '<option value="Juana Azurduy de Padilla International Airport">Juana Azurduy de Padilla International Airport</option>';
+            name_en_options_str  += '<option value="Juanda International Airport">Juanda International Airport</option>';
+            name_en_options_str  += '<option value="Julius Nyerere International Airport">Julius Nyerere International Airport</option>';
+            name_en_options_str  += '<option value="Juneau International Airport">Juneau International Airport</option>';
+            name_en_options_str  += '<option value="Kaduna Airport">Kaduna Airport</option>';
+            name_en_options_str  += '<option value="Kahului Airport">Kahului Airport</option>';
+            name_en_options_str  += '<option value="Kamloops Airport">Kamloops Airport</option>';
+            name_en_options_str  += '<option value="Kananga Airport">Kananga Airport</option>';
+            name_en_options_str  += '<option value="Kangerlussuaq Airport">Kangerlussuaq Airport</option>';
+            name_en_options_str  += '<option value="Kanpur Airport">Kanpur Airport</option>';
+            name_en_options_str  += '<option value="Kansai International Airport">Kansai International Airport</option>';
+            name_en_options_str  += '<option value="Kansas City International Airport">Kansas City International Airport</option>';
+            name_en_options_str  += '<option value="Kaohsiung International Airport">Kaohsiung International Airport</option>';
+            name_en_options_str  += '<option value="Kashgar Airport">Kashgar Airport</option>';
+            name_en_options_str  += '<option value="Kazan International Airport">Kazan International Airport</option>';
+            name_en_options_str  += '<option value="Kempegowda International Airport">Kempegowda International Airport</option>';
+            name_en_options_str  += '<option value="Kenitra Air Base">Kenitra Air Base</option>';
+            name_en_options_str  += '<option value="Kennedy Space Center">Kennedy Space Center</option>';
+            name_en_options_str  += '<option value="Kenneth Kaunda International Airport">Kenneth Kaunda International Airport</option>';
+            name_en_options_str  += '<option value="Kermanshah Airport">Kermanshah Airport</option>';
+            name_en_options_str  += '<option value="Kharkiv International Airport">Kharkiv International Airport</option>';
+            name_en_options_str  += '<option value="Khartoum International Airport">Khartoum International Airport</option>';
+            name_en_options_str  += '<option value="Kigali International Airport">Kigali International Airport</option>';
+            name_en_options_str  += '<option value="Kilimanjaro International Airport">Kilimanjaro International Airport</option>';
+            name_en_options_str  += '<option value="King Abdulaziz Air Base">King Abdulaziz Air Base</option>';
+            name_en_options_str  += '<option value="King Abdulaziz International Airport">King Abdulaziz International Airport</option>';
+            name_en_options_str  += '<option value="King Khalid International Airport">King Khalid International Airport</option>';
+            name_en_options_str  += '<option value="Kirkenes Airport">Kirkenes Airport</option>';
+            name_en_options_str  += '<option value="Kirkwall Airport">Kirkwall Airport</option>';
+            name_en_options_str  += '<option value="Kiruna Airport">Kiruna Airport</option>';
+            name_en_options_str  += '<option value="Kodiak Airport">Kodiak Airport</option>';
+            name_en_options_str  += '<option value="Koltsovo Airport">Koltsovo Airport</option>';
+            name_en_options_str  += '<option value="Konya Airport">Konya Airport</option>';
+            name_en_options_str  += '<option value="Kosrae International Airport">Kosrae International Airport</option>';
+            name_en_options_str  += '<option value="Kota Airport">Kota Airport</option>';
+            name_en_options_str  += '<option value="Kota Kinabalu International Airport">Kota Kinabalu International Airport</option>';
+            name_en_options_str  += '<option value="Kotoka International Airport">Kotoka International Airport</option>';
+            name_en_options_str  += '<option value="Kuala Lumpur International Airport">Kuala Lumpur International Airport</option>';
+            name_en_options_str  += '<option value="Kuching International Airport">Kuching International Airport</option>';
+            name_en_options_str  += '<option value="Kumasi Airport">Kumasi Airport</option>';
+            name_en_options_str  += '<option value="Kunming Changshui International Airport">Kunming Changshui International Airport</option>';
+            name_en_options_str  += '<option value="Kurumoch International Airport">Kurumoch International Airport</option>';
+            name_en_options_str  += '<option value="Kuujjuaq Airport">Kuujjuaq Airport</option>';
+            name_en_options_str  += '<option value="Kuwait International Airport">Kuwait International Airport</option>';
+            name_en_options_str  += '<option value="Kyiv Zhuliany International Airport">Kyiv Zhuliany International Airport</option>';
+            name_en_options_str  += '<option value="L.F. Wade International Airport">L.F. Wade International Airport</option>';
+            name_en_options_str  += '<option value="LA/Ontario International Airport">LA/Ontario International Airport</option>';
+            name_en_options_str  += '<option value="La Aurora International Airport">La Aurora International Airport</option>';
+            name_en_options_str  += '<option value="La Chinita International Airport">La Chinita International Airport</option>';
+            name_en_options_str  += '<option value="La Plata Airport">La Plata Airport</option>';
+            name_en_options_str  += '<option value="La Tontouta International Airport">La Tontouta International Airport</option>';
+            name_en_options_str  += '<option value="LaGuardia Airport">LaGuardia Airport</option>';
+            name_en_options_str  += '<option value="Lal Bahadur Shastri Airport">Lal Bahadur Shastri Airport</option>';
+            name_en_options_str  += '<option value="Lambert–St. Louis International Airport">Lambert–St. Louis International Airport</option>';
+            name_en_options_str  += '<option value="Lanzhou Zhongchuan International Airport">Lanzhou Zhongchuan International Airport</option>';
+            name_en_options_str  += '<option value="Laoag International Airport">Laoag International Airport</option>';
+            name_en_options_str  += '<option value="Laredo International Airport">Laredo International Airport</option>';
+            name_en_options_str  += '<option value="Las Américas International Airport">Las Américas International Airport</option>';
+            name_en_options_str  += '<option value="Leeds Bradford Airport">Leeds Bradford Airport</option>';
+            name_en_options_str  += '<option value="Leonardo da Vinci–Fiumicino Airport">Leonardo da Vinci–Fiumicino Airport</option>';
+            name_en_options_str  += '<option value="Lhasa Gonggar Airport">Lhasa Gonggar Airport</option>';
+            name_en_options_str  += '<option value="Libreville International Airport">Libreville International Airport</option>';
+            name_en_options_str  += '<option value="Lic. Adolfo López Mateos International Airport">Lic. Adolfo López Mateos International Airport</option>';
+            name_en_options_str  += '<option value="Lic. Jesús Terán Peredo International Airport">Lic. Jesús Terán Peredo International Airport</option>';
+            name_en_options_str  += '<option value="Lihue Airport">Lihue Airport</option>';
+            name_en_options_str  += '<option value="Lille Airport">Lille Airport</option>';
+            name_en_options_str  += '<option value="Lilongwe International Airport">Lilongwe International Airport</option>';
+            name_en_options_str  += '<option value="Linate Airport">Linate Airport</option>';
+            name_en_options_str  += '<option value="Lisbon Airport">Lisbon Airport</option>';
+            name_en_options_str  += '<option value="Liverpool John Lennon Airport">Liverpool John Lennon Airport</option>';
+            name_en_options_str  += '<option value="Ljubljana Jože Pučnik Airport">Ljubljana Jože Pučnik Airport</option>';
+            name_en_options_str  += '<option value="Logan International Airport">Logan International Airport</option>';
+            name_en_options_str  += '<option value="Lok Nayak Jayaprakash Airport">Lok Nayak Jayaprakash Airport</option>';
+            name_en_options_str  += '<option value="Lokpriya Gopinath Bordoloi International Airport">Lokpriya Gopinath Bordoloi International Airport</option>';
+            name_en_options_str  += '<option value="Lomé-Tokoin Airport">Lomé-Tokoin Airport</option>';
+            name_en_options_str  += '<option value="London Luton Airport">London Luton Airport</option>';
+            name_en_options_str  += '<option value="Los Angeles International Airport">Los Angeles International Airport</option>';
+            name_en_options_str  += '<option value="Los Cabos International Airport">Los Cabos International Airport</option>';
+            name_en_options_str  += '<option value="Louis Armstrong New Orleans International Airport">Louis Armstrong New Orleans International Airport</option>';
+            name_en_options_str  += '<option value="Louisville International Airport">Louisville International Airport</option>';
+            name_en_options_str  += '<option value="Lubumbashi International Airport">Lubumbashi International Airport</option>';
+            name_en_options_str  += '<option value="Luis Muñoz Marín International Airport">Luis Muñoz Marín International Airport</option>';
+            name_en_options_str  += '<option value="Luleå-Kallax Airport">Luleå-Kallax Airport</option>';
+            name_en_options_str  += '<option value="Lungi International Airport">Lungi International Airport</option>';
+            name_en_options_str  += '<option value="Luxembourg Airport">Luxembourg Airport</option>';
+            name_en_options_str  += '<option value="Luxor International Airport">Luxor International Airport</option>';
+            name_en_options_str  += '<option value="Lviv Danylo Halytskyi International Airport">Lviv Danylo Halytskyi International Airport</option>';
+            name_en_options_str  += '<option value="Lynden Pindling International Airport">Lynden Pindling International Airport</option>';
+            name_en_options_str  += '<option value="Lyon-Saint Exupéry Airport">Lyon-Saint Exupéry Airport</option>';
+            name_en_options_str  += '<option value="Léopold Sédar Senghor International Airport">Léopold Sédar Senghor International Airport</option>';
+            name_en_options_str  += '<option value="M. R. Štefánik Airport">M. R. Štefánik Airport</option>';
+            name_en_options_str  += '<option value="Macau International Airport">Macau International Airport</option>';
+            name_en_options_str  += '<option value="Mactan–Cebu International Airport">Mactan–Cebu International Airport</option>';
+            name_en_options_str  += '<option value="Madeira Airport">Madeira Airport</option>';
+            name_en_options_str  += '<option value="Madurai International Airport">Madurai International Airport</option>';
+            name_en_options_str  += '<option value="Maiduguri International Airport">Maiduguri International Airport</option>';
+            name_en_options_str  += '<option value="Mallam Aminu Kano International Airport">Mallam Aminu Kano International Airport</option>';
+            name_en_options_str  += '<option value="Malta International Airport">Malta International Airport</option>';
+            name_en_options_str  += '<option value="Manas International Airport">Manas International Airport</option>';
+            name_en_options_str  += '<option value="Manaus International Airport">Manaus International Airport</option>';
+            name_en_options_str  += '<option value="Manchester Airport">Manchester Airport</option>';
+            name_en_options_str  += '<option value="Manchester–Boston Regional Airport">Manchester–Boston Regional Airport</option>';
+            name_en_options_str  += '<option value="Mandalay International Airport">Mandalay International Airport</option>';
+            name_en_options_str  += '<option value="Manuel Crescencio Rejón International Airport">Manuel Crescencio Rejón International Airport</option>';
+            name_en_options_str  += '<option value="Manuel Márquez de León International Airport">Manuel Márquez de León International Airport</option>';
+            name_en_options_str  += '<option value="Maputo International Airport">Maputo International Airport</option>';
+            name_en_options_str  += '<option value="Marechal Cunha Machado International Airport">Marechal Cunha Machado International Airport</option>';
+            name_en_options_str  += '<option value="Marechal Rondon International Airport">Marechal Rondon International Airport</option>';
+            name_en_options_str  += '<option value="Mariscal Sucre International Airport">Mariscal Sucre International Airport</option>';
+            name_en_options_str  += '<option value="Marrakesh Menara Airport">Marrakesh Menara Airport</option>';
+            name_en_options_str  += '<option value="Marseille Provence Airport">Marseille Provence Airport</option>';
+            name_en_options_str  += '<option value="Marshall Islands International Airport">Marshall Islands International Airport</option>';
+            name_en_options_str  += '<option value="Martín Miguel de Güemes International Airport">Martín Miguel de Güemes International Airport</option>';
+            name_en_options_str  += '<option value="Mashhad International Airport">Mashhad International Airport</option>';
+            name_en_options_str  += '<option value="Mataveri International Airport">Mataveri International Airport</option>';
+            name_en_options_str  += '<option value="Maurice Bishop International Airport">Maurice Bishop International Airport</option>';
+            name_en_options_str  += '<option value="Mbuji Mayi Airport">Mbuji Mayi Airport</option>';
+            name_en_options_str  += '<option value="McCarran International Airport">McCarran International Airport</option>';
+            name_en_options_str  += '<option value="McGhee Tyson Airport">McGhee Tyson Airport</option>';
+            name_en_options_str  += '<option value="McNary Field">McNary Field</option>';
+            name_en_options_str  += '<option value="Mehrabad International Airport">Mehrabad International Airport</option>';
+            name_en_options_str  += '<option value="Melbourne Airport">Melbourne Airport</option>';
+            name_en_options_str  += '<option value="Memphis International Airport">Memphis International Airport</option>';
+            name_en_options_str  += '<option value="Mexico City International Airport">Mexico City International Airport</option>';
+            name_en_options_str  += '<option value="Miami International Airport">Miami International Airport</option>';
+            name_en_options_str  += '<option value="Midway International Airport">Midway International Airport</option>';
+            name_en_options_str  += '<option value="Miguel Hidalgo y Costilla Guadalajara International Airport">Miguel Hidalgo y Costilla Guadalajara International Airport</option>';
+            name_en_options_str  += '<option value="Milan–Malpensa Airport">Milan–Malpensa Airport</option>';
+            name_en_options_str  += '<option value="Milwaukee Mitchell International Airport">Milwaukee Mitchell International Airport</option>';
+            name_en_options_str  += '<option value="Minangkabau International Airport">Minangkabau International Airport</option>';
+            name_en_options_str  += '<option value="Ministro Pistarini International Airport">Ministro Pistarini International Airport</option>';
+            name_en_options_str  += '<option value="Minneapolis–Saint Paul International Airport">Minneapolis–Saint Paul International Airport</option>';
+            name_en_options_str  += '<option value="Minot International Airport">Minot International Airport</option>';
+            name_en_options_str  += '<option value="Minsk National Airport">Minsk National Airport</option>';
+            name_en_options_str  += '<option value="Missoula International Airport">Missoula International Airport</option>';
+            name_en_options_str  += '<option value="Mohamed Boudiaf International Airport">Mohamed Boudiaf International Airport</option>';
+            name_en_options_str  += '<option value="Mohammed V International Airport">Mohammed V International Airport</option>';
+            name_en_options_str  += '<option value="Moi International Airport">Moi International Airport</option>';
+            name_en_options_str  += '<option value="Monastir Habib Bourguiba International Airport">Monastir Habib Bourguiba International Airport</option>';
+            name_en_options_str  += '<option value="Monseñor Óscar Arnulfo Romero International Airport">Monseñor Óscar Arnulfo Romero International Airport</option>';
+            name_en_options_str  += '<option value="Montgomery Regional Airport">Montgomery Regional Airport</option>';
+            name_en_options_str  += '<option value="Montréal–Mirabel International Airport">Montréal–Mirabel International Airport</option>';
+            name_en_options_str  += '<option value="Montréal–Pierre Elliott Trudeau International Airport">Montréal–Pierre Elliott Trudeau International Airport</option>';
+            name_en_options_str  += '<option value="Moshoeshoe I International Airport">Moshoeshoe I International Airport</option>';
+            name_en_options_str  += '<option value="Mosul International Airport">Mosul International Airport</option>';
+            name_en_options_str  += '<option value="Mudanjiang Hailang International Airport">Mudanjiang Hailang International Airport</option>';
+            name_en_options_str  += '<option value="Multan International Airport">Multan International Airport</option>';
+            name_en_options_str  += '<option value="Mundo Maya International Airport">Mundo Maya International Airport</option>';
+            name_en_options_str  += '<option value="Munich Airport">Munich Airport</option>';
+            name_en_options_str  += '<option value="Murtala Muhammed International Airport">Murtala Muhammed International Airport</option>';
+            name_en_options_str  += '<option value="Muscat International Airport">Muscat International Airport</option>';
+            name_en_options_str  += '<option value="N&apos;Djamena International Airport">N&apos;Djamena International Airport</option>';
+            name_en_options_str  += '<option value="Nadi International Airport">Nadi International Airport</option>';
+            name_en_options_str  += '<option value="Nagoya Airfield">Nagoya Airfield</option>';
+            name_en_options_str  += '<option value="Nanchang Changbei International Airport">Nanchang Changbei International Airport</option>';
+            name_en_options_str  += '<option value="Nanjing Lukou International Airport">Nanjing Lukou International Airport</option>';
+            name_en_options_str  += '<option value="Nanning Wuxu International Airport">Nanning Wuxu International Airport</option>';
+            name_en_options_str  += '<option value="Naples International Airport">Naples International Airport</option>';
+            name_en_options_str  += '<option value="Narita International Airport">Narita International Airport</option>';
+            name_en_options_str  += '<option value="Narsarsuaq Airport">Narsarsuaq Airport</option>';
+            name_en_options_str  += '<option value="Nashville International Airport">Nashville International Airport</option>';
+            name_en_options_str  += '<option value="Nauru International Airport">Nauru International Airport</option>';
+            name_en_options_str  += '<option value="Nausori International Airport">Nausori International Airport</option>';
+            name_en_options_str  += '<option value="Netaji Subhas Chandra Bose International Airport">Netaji Subhas Chandra Bose International Airport</option>';
+            name_en_options_str  += '<option value="Newark Liberty International Airport">Newark Liberty International Airport</option>';
+            name_en_options_str  += '<option value="Newcastle International Airport">Newcastle International Airport</option>';
+            name_en_options_str  += '<option value="Ngurah Rai International Airport">Ngurah Rai International Airport</option>';
+            name_en_options_str  += '<option value="Ningbo Lishe International Airport">Ningbo Lishe International Airport</option>';
+            name_en_options_str  += '<option value="Ninoy Aquino International Airport">Ninoy Aquino International Airport</option>';
+            name_en_options_str  += '<option value="Niue International Airport">Niue International Airport</option>';
+            name_en_options_str  += '<option value="Nizhny Novgorod International Airport">Nizhny Novgorod International Airport</option>';
+            name_en_options_str  += '<option value="Nnamdi Azikiwe International Airport">Nnamdi Azikiwe International Airport</option>';
+            name_en_options_str  += '<option value="Nogales International Airport">Nogales International Airport</option>';
+            name_en_options_str  += '<option value="Noi Bai International Airport">Noi Bai International Airport</option>';
+            name_en_options_str  += '<option value="Nome Airport">Nome Airport</option>';
+            name_en_options_str  += '<option value="Norfolk International Airport">Norfolk International Airport</option>';
+            name_en_options_str  += '<option value="Norfolk Island Airport">Norfolk Island Airport</option>';
+            name_en_options_str  += '<option value="Norman Manley International Airport">Norman Manley International Airport</option>';
+            name_en_options_str  += '<option value="Norrköping Airport">Norrköping Airport</option>';
+            name_en_options_str  += '<option value="North Bay/Jack Garland Airport">North Bay/Jack Garland Airport</option>';
+            name_en_options_str  += '<option value="Nouadhibou International Airport">Nouadhibou International Airport</option>';
+            name_en_options_str  += '<option value="Nouakchott–Oumtounsy International Airport">Nouakchott–Oumtounsy International Airport</option>';
+            name_en_options_str  += '<option value="Nueva Hespérides International Airport">Nueva Hespérides International Airport</option>';
+            name_en_options_str  += '<option value="Nuremberg Airport">Nuremberg Airport</option>';
+            name_en_options_str  += '<option value="Nursultan Nazarbayev International Airport">Nursultan Nazarbayev International Airport</option>';
+            name_en_options_str  += '<option value="O&apos;Hare International Airport">O&apos;Hare International Airport</option>';
+            name_en_options_str  += '<option value="OR Tambo International Airport">OR Tambo International Airport</option>';
+            name_en_options_str  += '<option value="Oakland International Airport">Oakland International Airport</option>';
+            name_en_options_str  += '<option value="Odessa International Airport">Odessa International Airport</option>';
+            name_en_options_str  += '<option value="Okadama Airport">Okadama Airport</option>';
+            name_en_options_str  += '<option value="Omsk Tsentralny Airport">Omsk Tsentralny Airport</option>';
+            name_en_options_str  += '<option value="Oran Ahmed Ben Bella Airport">Oran Ahmed Ben Bella Airport</option>';
+            name_en_options_str  += '<option value="Orlando International Airport">Orlando International Airport</option>';
+            name_en_options_str  += '<option value="Orly Airport">Orly Airport</option>';
+            name_en_options_str  += '<option value="Osaka International Airport">Osaka International Airport</option>';
+            name_en_options_str  += '<option value="Oslo Airport">Oslo Airport</option>';
+            name_en_options_str  += '<option value="Osvaldo Vieira International Airport">Osvaldo Vieira International Airport</option>';
+            name_en_options_str  += '<option value="Ottawa Macdonald-Cartier International Airport">Ottawa Macdonald-Cartier International Airport</option>';
+            name_en_options_str  += '<option value="Ouagadougou Airport">Ouagadougou Airport</option>';
+            name_en_options_str  += '<option value="Oulu Airport">Oulu Airport</option>';
+            name_en_options_str  += '<option value="Owen Roberts International Airport">Owen Roberts International Airport</option>';
+            name_en_options_str  += '<option value="Oğuzeli Airport">Oğuzeli Airport</option>';
+            name_en_options_str  += '<option value="Pago Pago International Airport">Pago Pago International Airport</option>';
+            name_en_options_str  += '<option value="Palanga International Airport">Palanga International Airport</option>';
+            name_en_options_str  += '<option value="Palm Beach International Airport">Palm Beach International Airport</option>';
+            name_en_options_str  += '<option value="Palma de Mallorca Airport">Palma de Mallorca Airport</option>';
+            name_en_options_str  += '<option value="Palmerston North International Airport">Palmerston North International Airport</option>';
+            name_en_options_str  += '<option value="Palonegro International Airport">Palonegro International Airport</option>';
+            name_en_options_str  += '<option value="Paphos International Airport">Paphos International Airport</option>';
+            name_en_options_str  += '<option value="Paris-Charles de Gaulle Airport">Paris-Charles de Gaulle Airport</option>';
+            name_en_options_str  += '<option value="Paysandú Airport">Paysandú Airport</option>';
+            name_en_options_str  += '<option value="Peace River Airport">Peace River Airport</option>';
+            name_en_options_str  += '<option value="Penang International Airport">Penang International Airport</option>';
+            name_en_options_str  += '<option value="Perth Airport">Perth Airport</option>';
+            name_en_options_str  += '<option value="Philadelphia International Airport">Philadelphia International Airport</option>';
+            name_en_options_str  += '<option value="Philip S. W. Goldson International Airport">Philip S. W. Goldson International Airport</option>';
+            name_en_options_str  += '<option value="Phnom Penh International Airport">Phnom Penh International Airport</option>';
+            name_en_options_str  += '<option value="Phoenix Sky Harbor International Airport">Phoenix Sky Harbor International Airport</option>';
+            name_en_options_str  += '<option value="Phuket International Airport">Phuket International Airport</option>';
+            name_en_options_str  += '<option value="Piedmont Triad International Airport">Piedmont Triad International Airport</option>';
+            name_en_options_str  += '<option value="Pierre Regional Airport">Pierre Regional Airport</option>';
+            name_en_options_str  += '<option value="Piloto Civil Norberto Fernández International Airport">Piloto Civil Norberto Fernández International Airport</option>';
+            name_en_options_str  += '<option value="Pinto Martins – Fortaleza International Airport">Pinto Martins – Fortaleza International Airport</option>';
+            name_en_options_str  += '<option value="Pisa International Airport">Pisa International Airport</option>';
+            name_en_options_str  += '<option value="Pittsburgh International Airport">Pittsburgh International Airport</option>';
+            name_en_options_str  += '<option value="Plan de Guadalupe International Airport">Plan de Guadalupe International Airport</option>';
+            name_en_options_str  += '<option value="Playa de Oro International Airport">Playa de Oro International Airport</option>';
+            name_en_options_str  += '<option value="Podgorica Airport">Podgorica Airport</option>';
+            name_en_options_str  += '<option value="Pohnpei International Airport">Pohnpei International Airport</option>';
+            name_en_options_str  += '<option value="Polokwane International Airport">Polokwane International Airport</option>';
+            name_en_options_str  += '<option value="Ponta Porã International Airport">Ponta Porã International Airport</option>';
+            name_en_options_str  += '<option value="Port Bouet Airport">Port Bouet Airport</option>';
+            name_en_options_str  += '<option value="Port Harcourt International Airport">Port Harcourt International Airport</option>';
+            name_en_options_str  += '<option value="Port Hedland International Airport">Port Hedland International Airport</option>';
+            name_en_options_str  += '<option value="Port Sudan">Port Sudan</option>';
+            name_en_options_str  += '<option value="Port Sudan New International Airport">Port Sudan New International Airport</option>';
+            name_en_options_str  += '<option value="Portland International Airport">Portland International Airport</option>';
+            name_en_options_str  += '<option value="Prague Václav Havel Airport">Prague Václav Havel Airport</option>';
+            name_en_options_str  += '<option value="Praia International Airport">Praia International Airport</option>';
+            name_en_options_str  += '<option value="Presidente Carlos Ibáñez del Campo International Airport">Presidente Carlos Ibáñez del Campo International Airport</option>';
+            name_en_options_str  += '<option value="Presidente Castro Pinto International Airport">Presidente Castro Pinto International Airport</option>';
+            name_en_options_str  += '<option value="Presidente Nicolau Lobato International Airport">Presidente Nicolau Lobato International Airport</option>';
+            name_en_options_str  += '<option value="Prince George Airport">Prince George Airport</option>';
+            name_en_options_str  += '<option value="Prince Mohammad Bin Abdulaziz International Airport">Prince Mohammad Bin Abdulaziz International Airport</option>';
+            name_en_options_str  += '<option value="Prince Rupert Airport">Prince Rupert Airport</option>';
+            name_en_options_str  += '<option value="Prince Said Ibrahim International Airport">Prince Said Ibrahim International Airport</option>';
+            name_en_options_str  += '<option value="Princess Juliana International Airport">Princess Juliana International Airport</option>';
+            name_en_options_str  += '<option value="Pristina International Airport Adem Jashari">Pristina International Airport Adem Jashari</option>';
+            name_en_options_str  += '<option value="Pulkovo Airport">Pulkovo Airport</option>';
+            name_en_options_str  += '<option value="Pune Airport">Pune Airport</option>';
+            name_en_options_str  += '<option value="Punta Cana International Airport">Punta Cana International Airport</option>';
+            name_en_options_str  += '<option value="Pyongyang International Airport">Pyongyang International Airport</option>';
+            name_en_options_str  += '<option value="Qingdao Liuting International Airport">Qingdao Liuting International Airport</option>';
+            name_en_options_str  += '<option value="Quatro de Fevereiro Airport">Quatro de Fevereiro Airport</option>';
+            name_en_options_str  += '<option value="Queen Alia International Airport">Queen Alia International Airport</option>';
+            name_en_options_str  += '<option value="Queen Beatrix International Airport">Queen Beatrix International Airport</option>';
+            name_en_options_str  += '<option value="Querétaro International Airport">Querétaro International Airport</option>';
+            name_en_options_str  += '<option value="Quetta International Airport">Quetta International Airport</option>';
+            name_en_options_str  += '<option value="Quetzalcóatl International Airport">Quetzalcóatl International Airport</option>';
+            name_en_options_str  += '<option value="Québec City Jean Lesage International Airport">Québec City Jean Lesage International Airport</option>';
+            name_en_options_str  += '<option value="Radin Inten II Airport">Radin Inten II Airport</option>';
+            name_en_options_str  += '<option value="Rafael Núñez International Airport">Rafael Núñez International Airport</option>';
+            name_en_options_str  += '<option value="Raja Bhoj Airport">Raja Bhoj Airport</option>';
+            name_en_options_str  += '<option value="Rajiv Gandhi International Airport">Rajiv Gandhi International Airport</option>';
+            name_en_options_str  += '<option value="Rajkot Airport">Rajkot Airport</option>';
+            name_en_options_str  += '<option value="Raleigh–Durham International Airport">Raleigh–Durham International Airport</option>';
+            name_en_options_str  += '<option value="Ramón Villeda Morales International Airport">Ramón Villeda Morales International Airport</option>';
+            name_en_options_str  += '<option value="Rarotonga International Airport">Rarotonga International Airport</option>';
+            name_en_options_str  += '<option value="Recife/Guararapes–Gilberto Freyre International Airport">Recife/Guararapes–Gilberto Freyre International Airport</option>';
+            name_en_options_str  += '<option value="Regina International Airport">Regina International Airport</option>';
+            name_en_options_str  += '<option value="Reno–Tahoe International Airport">Reno–Tahoe International Airport</option>';
+            name_en_options_str  += '<option value="Repulse Bay Airport">Repulse Bay Airport</option>';
+            name_en_options_str  += '<option value="Resolute Bay Airport">Resolute Bay Airport</option>';
+            name_en_options_str  += '<option value="Reykjavík Airport">Reykjavík Airport</option>';
+            name_en_options_str  += '<option value="Richmond International Airport">Richmond International Airport</option>';
+            name_en_options_str  += '<option value="Rick Husband Amarillo International Airport">Rick Husband Amarillo International Airport</option>';
+            name_en_options_str  += '<option value="Riga International Airport">Riga International Airport</option>';
+            name_en_options_str  += '<option value="Rio Grande Airport">Rio Grande Airport</option>';
+            name_en_options_str  += '<option value="Rio de Janeiro/Galeão – Antonio Carlos Jobim International Airport">Rio de Janeiro/Galeão – Antonio Carlos Jobim International Airport</option>';
+            name_en_options_str  += '<option value="Robert L. Bradshaw International Airport">Robert L. Bradshaw International Airport</option>';
+            name_en_options_str  += '<option value="Roberts International Airport">Roberts International Airport</option>';
+            name_en_options_str  += '<option value="Rockhampton Airport">Rockhampton Airport</option>';
+            name_en_options_str  += '<option value="Rodríguez Ballón International Airport">Rodríguez Ballón International Airport</option>';
+            name_en_options_str  += '<option value="Roman Tmetuchl International Airport">Roman Tmetuchl International Airport</option>';
+            name_en_options_str  += '<option value="Ronald Reagan Washington National Airport">Ronald Reagan Washington National Airport</option>';
+            name_en_options_str  += '<option value="Rosario – Islas Malvinas International Airport">Rosario – Islas Malvinas International Airport</option>';
+            name_en_options_str  += '<option value="Rostov-on-Don Airport">Rostov-on-Don Airport</option>';
+            name_en_options_str  += '<option value="Rota International Airport">Rota International Airport</option>';
+            name_en_options_str  += '<option value="Rotterdam The Hague Airport">Rotterdam The Hague Airport</option>';
+            name_en_options_str  += '<option value="Rovaniemi Airport">Rovaniemi Airport</option>';
+            name_en_options_str  += '<option value="Sacramento International Airport">Sacramento International Airport</option>';
+            name_en_options_str  += '<option value="Sadiq Abubakar III International Airport">Sadiq Abubakar III International Airport</option>';
+            name_en_options_str  += '<option value="Sahnewal Airport">Sahnewal Airport</option>';
+            name_en_options_str  += '<option value="Saint John Airport">Saint John Airport</option>';
+            name_en_options_str  += '<option value="Saipan International Airport">Saipan International Airport</option>';
+            name_en_options_str  += '<option value="Salgado Filho International Airport">Salgado Filho International Airport</option>';
+            name_en_options_str  += '<option value="Salt Lake City International Airport">Salt Lake City International Airport</option>';
+            name_en_options_str  += '<option value="San Antonio International Airport">San Antonio International Airport</option>';
+            name_en_options_str  += '<option value="San Carlos de Bariloche Airport">San Carlos de Bariloche Airport</option>';
+            name_en_options_str  += '<option value="San Diego International Airport">San Diego International Airport</option>';
+            name_en_options_str  += '<option value="San Francisco International Airport">San Francisco International Airport</option>';
+            name_en_options_str  += '<option value="San Jose International Airport">San Jose International Airport</option>';
+            name_en_options_str  += '<option value="San Luis Potosí International Airport">San Luis Potosí International Airport</option>';
+            name_en_options_str  += '<option value="Sana&apos;a International Airport">Sana&apos;a International Airport</option>';
+            name_en_options_str  += '<option value="Sangster International Airport">Sangster International Airport</option>';
+            name_en_options_str  += '<option value="Santa Barbara Municipal Airport">Santa Barbara Municipal Airport</option>';
+            name_en_options_str  += '<option value="Santa Bernardina International Airport">Santa Bernardina International Airport</option>';
+            name_en_options_str  += '<option value="Santa Genoveva Airport">Santa Genoveva Airport</option>';
+            name_en_options_str  += '<option value="Santo-Pekoa International Airport">Santo-Pekoa International Airport</option>';
+            name_en_options_str  += '<option value="Santos Airbase">Santos Airbase</option>';
+            name_en_options_str  += '<option value="Sanya Phoenix International Airport">Sanya Phoenix International Airport</option>';
+            name_en_options_str  += '<option value="Sarajevo International Airport">Sarajevo International Airport</option>';
+            name_en_options_str  += '<option value="Saratov Tsentralny Airport">Saratov Tsentralny Airport</option>';
+            name_en_options_str  += '<option value="Sardar Vallabhbhai Patel International Airport">Sardar Vallabhbhai Patel International Airport</option>';
+            name_en_options_str  += '<option value="Saskatoon John G. Diefenbaker International Airport">Saskatoon John G. Diefenbaker International Airport</option>';
+            name_en_options_str  += '<option value="Sault Ste. Marie Airport">Sault Ste. Marie Airport</option>';
+            name_en_options_str  += '<option value="Savannah/Hilton Head International Airport">Savannah/Hilton Head International Airport</option>';
+            name_en_options_str  += '<option value="Scholes International Airport at Galveston">Scholes International Airport at Galveston</option>';
+            name_en_options_str  += '<option value="Seattle–Tacoma International Airport">Seattle–Tacoma International Airport</option>';
+            name_en_options_str  += '<option value="Sendai Airport">Sendai Airport</option>';
+            name_en_options_str  += '<option value="Severomorsk-3">Severomorsk-3</option>';
+            name_en_options_str  += '<option value="Seychelles International Airport">Seychelles International Airport</option>';
+            name_en_options_str  += '<option value="Shah Amanat International Airport">Shah Amanat International Airport</option>';
+            name_en_options_str  += '<option value="Shah Makhdum Airport">Shah Makhdum Airport</option>';
+            name_en_options_str  += '<option value="Shahjalal International Airport">Shahjalal International Airport</option>';
+            name_en_options_str  += '<option value="Shanghai Hongqiao International Airport">Shanghai Hongqiao International Airport</option>';
+            name_en_options_str  += '<option value="Shanghai Pudong International Airport">Shanghai Pudong International Airport</option>';
+            name_en_options_str  += '<option value="Shannon Airport">Shannon Airport</option>';
+            name_en_options_str  += '<option value="Sharjah International Airport">Sharjah International Airport</option>';
+            name_en_options_str  += '<option value="Sharm el-Sheikh International Airport">Sharm el-Sheikh International Airport</option>';
+            name_en_options_str  += '<option value="Sheikh ul-Alam International Airport">Sheikh ul-Alam International Airport</option>';
+            name_en_options_str  += '<option value="Shenyang Taoxian International Airport">Shenyang Taoxian International Airport</option>';
+            name_en_options_str  += '<option value="Shenzhen Bao&apos;an International Airport">Shenzhen Bao&apos;an International Airport</option>';
+            name_en_options_str  += '<option value="Sheremetyevo International Airport">Sheremetyevo International Airport</option>';
+            name_en_options_str  += '<option value="Shijiazhuang Zhengding International Airport">Shijiazhuang Zhengding International Airport</option>';
+            name_en_options_str  += '<option value="Shiraz International Airport">Shiraz International Airport</option>';
+            name_en_options_str  += '<option value="Shreveport Regional Airport">Shreveport Regional Airport</option>';
+            name_en_options_str  += '<option value="Siem Reap International Airport">Siem Reap International Airport</option>';
+            name_en_options_str  += '<option value="Silvio Pettirossi International Airport">Silvio Pettirossi International Airport</option>';
+            name_en_options_str  += '<option value="Simferopol International Airport">Simferopol International Airport</option>';
+            name_en_options_str  += '<option value="Simón Bolívar International Airport">Simón Bolívar International Airport</option>';
+            name_en_options_str  += '<option value="Singapore Changi Airport">Singapore Changi Airport</option>';
+            name_en_options_str  += '<option value="Sioux Falls Regional Airport">Sioux Falls Regional Airport</option>';
+            name_en_options_str  += '<option value="Sir Seewoosagur Ramgoolam International Airport">Sir Seewoosagur Ramgoolam International Airport</option>';
+            name_en_options_str  += '<option value="Sir Seretse Khama International Airport">Sir Seretse Khama International Airport</option>';
+            name_en_options_str  += '<option value="Sitka Rocky Gutierrez Airport">Sitka Rocky Gutierrez Airport</option>';
+            name_en_options_str  += '<option value="Skopje Airport">Skopje Airport</option>';
+            name_en_options_str  += '<option value="Soekarno–Hatta International Airport">Soekarno–Hatta International Airport</option>';
+            name_en_options_str  += '<option value="Soewondo Air Force Base">Soewondo Air Force Base</option>';
+            name_en_options_str  += '<option value="Sofia Airport">Sofia Airport</option>';
+            name_en_options_str  += '<option value="Solapur Airport">Solapur Airport</option>';
+            name_en_options_str  += '<option value="Sonari Airport">Sonari Airport</option>';
+            name_en_options_str  += '<option value="Southwest Florida International Airport">Southwest Florida International Airport</option>';
+            name_en_options_str  += '<option value="Spokane International Airport">Spokane International Airport</option>';
+            name_en_options_str  += '<option value="Springfield-Branson National Airport">Springfield-Branson National Airport</option>';
+            name_en_options_str  += '<option value="Sri Guru Ram Dass Jee International Airport">Sri Guru Ram Dass Jee International Airport</option>';
+            name_en_options_str  += '<option value="St. John&apos;s International Airport">St. John&apos;s International Airport</option>';
+            name_en_options_str  += '<option value="Stavanger Airport">Stavanger Airport</option>';
+            name_en_options_str  += '<option value="Stockholm Arlanda Airport">Stockholm Arlanda Airport</option>';
+            name_en_options_str  += '<option value="Stockholm Bromma Airport">Stockholm Bromma Airport</option>';
+            name_en_options_str  += '<option value="Stockholm Skavsta Airport">Stockholm Skavsta Airport</option>';
+            name_en_options_str  += '<option value="Strasbourg Airport">Strasbourg Airport</option>';
+            name_en_options_str  += '<option value="Stuttgart Airport">Stuttgart Airport</option>';
+            name_en_options_str  += '<option value="Sudbury Airport">Sudbury Airport</option>';
+            name_en_options_str  += '<option value="Sultan Hasanuddin International Airport">Sultan Hasanuddin International Airport</option>';
+            name_en_options_str  += '<option value="Sultan Mahmud Badaruddin II International Airport">Sultan Mahmud Badaruddin II International Airport</option>';
+            name_en_options_str  += '<option value="Sultan Syarif Kasim II Airport">Sultan Syarif Kasim II Airport</option>';
+            name_en_options_str  += '<option value="Sumburgh Airport">Sumburgh Airport</option>';
+            name_en_options_str  += '<option value="Sunchon Airport">Sunchon Airport</option>';
+            name_en_options_str  += '<option value="Surat Airport">Surat Airport</option>';
+            name_en_options_str  += '<option value="Surgut International Airport">Surgut International Airport</option>';
+            name_en_options_str  += '<option value="Suvarnabhumi Airport">Suvarnabhumi Airport</option>';
+            name_en_options_str  += '<option value="Svalbard Airport">Svalbard Airport</option>';
+            name_en_options_str  += '<option value="Swami Vivekananda Airport">Swami Vivekananda Airport</option>';
+            name_en_options_str  += '<option value="Sydney Airport">Sydney Airport</option>';
+            name_en_options_str  += '<option value="Sydney/J.A. Douglas McCurdy Airport">Sydney/J.A. Douglas McCurdy Airport</option>';
+            name_en_options_str  += '<option value="Syracuse Hancock International Airport">Syracuse Hancock International Airport</option>';
+            name_en_options_str  += '<option value="São Paulo-Guarulhos International Airport">São Paulo-Guarulhos International Airport</option>';
+            name_en_options_str  += '<option value="São Tomé International Airport">São Tomé International Airport</option>';
+            name_en_options_str  += '<option value="T. F. Green Airport">T. F. Green Airport</option>';
+            name_en_options_str  += '<option value="Ta&apos;izz International Airport">Ta&apos;izz International Airport</option>';
+            name_en_options_str  += '<option value="Taba International Airport">Taba International Airport</option>';
+            name_en_options_str  += '<option value="Tabatinga International Airport">Tabatinga International Airport</option>';
+            name_en_options_str  += '<option value="Tabriz International Airport">Tabriz International Airport</option>';
+            name_en_options_str  += '<option value="Taichung Airport">Taichung Airport</option>';
+            name_en_options_str  += '<option value="Tainan Airport">Tainan Airport</option>';
+            name_en_options_str  += '<option value="Taiyuan Wusu International Airport">Taiyuan Wusu International Airport</option>';
+            name_en_options_str  += '<option value="Talagi Airport">Talagi Airport</option>';
+            name_en_options_str  += '<option value="Tallahassee International Airport">Tallahassee International Airport</option>';
+            name_en_options_str  += '<option value="Tallinn Airport">Tallinn Airport</option>';
+            name_en_options_str  += '<option value="Tampa International Airport">Tampa International Airport</option>';
+            name_en_options_str  += '<option value="Tan Son Nhat International Airport">Tan Son Nhat International Airport</option>';
+            name_en_options_str  += '<option value="Tancredo Neves International Airport">Tancredo Neves International Airport</option>';
+            name_en_options_str  += '<option value="Tangier Ibn Battouta Airport">Tangier Ibn Battouta Airport</option>';
+            name_en_options_str  += '<option value="Taoyuan International Airport">Taoyuan International Airport</option>';
+            name_en_options_str  += '<option value="Tapachula International Airport">Tapachula International Airport</option>';
+            name_en_options_str  += '<option value="Tashkent International Airport">Tashkent International Airport</option>';
+            name_en_options_str  += '<option value="Tbilisi International Airport">Tbilisi International Airport</option>';
+            name_en_options_str  += '<option value="Ted Stevens Anchorage International Airport">Ted Stevens Anchorage International Airport</option>';
+            name_en_options_str  += '<option value="Tenerife North Airport">Tenerife North Airport</option>';
+            name_en_options_str  += '<option value="Teniente Benjamín Matienzo International Airport">Teniente Benjamín Matienzo International Airport</option>';
+            name_en_options_str  += '<option value="Teresina Airport">Teresina Airport</option>';
+            name_en_options_str  += '<option value="Terrance B. Lettsome International Airport">Terrance B. Lettsome International Airport</option>';
+            name_en_options_str  += '<option value="Thessaloniki Airport "Makedonia"">Thessaloniki Airport "Makedonia"</option>';
+            name_en_options_str  += '<option value="Thompson Airport">Thompson Airport</option>';
+            name_en_options_str  += '<option value="Thunder Bay International Airport">Thunder Bay International Airport</option>';
+            name_en_options_str  += '<option value="Tianjin Binhai International Airport">Tianjin Binhai International Airport</option>';
+            name_en_options_str  += '<option value="Tijuana International Airport">Tijuana International Airport</option>';
+            name_en_options_str  += '<option value="Timmins/Victor M. Power Airport">Timmins/Victor M. Power Airport</option>';
+            name_en_options_str  += '<option value="Tirana International Airport Nënë Tereza">Tirana International Airport Nënë Tereza</option>';
+            name_en_options_str  += '<option value="Tiruchirapalli Airport">Tiruchirapalli Airport</option>';
+            name_en_options_str  += '<option value="Tobías Bolaños International Airport">Tobías Bolaños International Airport</option>';
+            name_en_options_str  += '<option value="Tocumen International Airport">Tocumen International Airport</option>';
+            name_en_options_str  += '<option value="Tokyo International Airport">Tokyo International Airport</option>';
+            name_en_options_str  += '<option value="Tolmachevo Airport">Tolmachevo Airport</option>';
+            name_en_options_str  += '<option value="Toncontín International Airport">Toncontín International Airport</option>';
+            name_en_options_str  += '<option value="Toronto Pearson International Airport">Toronto Pearson International Airport</option>';
+            name_en_options_str  += '<option value="Toulouse–Blagnac Airport">Toulouse–Blagnac Airport</option>';
+            name_en_options_str  += '<option value="Toussaint Louverture International Airport">Toussaint Louverture International Airport</option>';
+            name_en_options_str  += '<option value="Townsville Airport">Townsville Airport</option>';
+            name_en_options_str  += '<option value="Tribhuvan International Airport">Tribhuvan International Airport</option>';
+            name_en_options_str  += '<option value="Tripoli International Airport">Tripoli International Airport</option>';
+            name_en_options_str  += '<option value="Trivandrum International Airport">Trivandrum International Airport</option>';
+            name_en_options_str  += '<option value="Tromsø Airport">Tromsø Airport</option>';
+            name_en_options_str  += '<option value="Trondheim Airport">Trondheim Airport</option>';
+            name_en_options_str  += '<option value="Tucson International Airport">Tucson International Airport</option>';
+            name_en_options_str  += '<option value="Tulsa International Airport">Tulsa International Airport</option>';
+            name_en_options_str  += '<option value="Tunis–Carthage International Airport">Tunis–Carthage International Airport</option>';
+            name_en_options_str  += '<option value="Turbat International Airport">Turbat International Airport</option>';
+            name_en_options_str  += '<option value="Turin Airport">Turin Airport</option>';
+            name_en_options_str  += '<option value="U-Tapao International Airport">U-Tapao International Airport</option>';
+            name_en_options_str  += '<option value="Ufa International Airport">Ufa International Airport</option>';
+            name_en_options_str  += '<option value="Ulsan Airport">Ulsan Airport</option>';
+            name_en_options_str  += '<option value="V. C. Bird International Airport">V. C. Bird International Airport</option>';
+            name_en_options_str  += '<option value="Vadodara Airport">Vadodara Airport</option>';
+            name_en_options_str  += '<option value="Val de Cans International Airport">Val de Cans International Airport</option>';
+            name_en_options_str  += '<option value="Valencia Airport">Valencia Airport</option>';
+            name_en_options_str  += '<option value="Valle del Fuerte Federal International Airport">Valle del Fuerte Federal International Airport</option>';
+            name_en_options_str  += '<option value="Vancouver International Airport">Vancouver International Airport</option>';
+            name_en_options_str  += '<option value="Vava&apos;u International Airport">Vava&apos;u International Airport</option>';
+            name_en_options_str  += '<option value="Velana International Airport">Velana International Airport</option>';
+            name_en_options_str  += '<option value="Venice Marco Polo Airport">Venice Marco Polo Airport</option>';
+            name_en_options_str  += '<option value="Venustiano Carranza International Airport">Venustiano Carranza International Airport</option>';
+            name_en_options_str  += '<option value="Victoria Falls Airport">Victoria Falls Airport</option>';
+            name_en_options_str  += '<option value="Victoria International Airport">Victoria International Airport</option>';
+            name_en_options_str  += '<option value="Vijayawada Airport">Vijayawada Airport</option>';
+            name_en_options_str  += '<option value="Vilnius Airport">Vilnius Airport</option>';
+            name_en_options_str  += '<option value="Viracopos International Airport">Viracopos International Airport</option>';
+            name_en_options_str  += '<option value="Viru Viru International Airport">Viru Viru International Airport</option>';
+            name_en_options_str  += '<option value="Visakhapatnam International Airport">Visakhapatnam International Airport</option>';
+            name_en_options_str  += '<option value="Viña del Mar Airport">Viña del Mar Airport</option>';
+            name_en_options_str  += '<option value="Vladivostok International Airport">Vladivostok International Airport</option>';
+            name_en_options_str  += '<option value="Volgograd International Airport">Volgograd International Airport</option>';
+            name_en_options_str  += '<option value="Voronezh International Airport">Voronezh International Airport</option>';
+            name_en_options_str  += '<option value="Vágar Airport">Vágar Airport</option>';
+            name_en_options_str  += '<option value="Wabush Airport">Wabush Airport</option>';
+            name_en_options_str  += '<option value="Warsaw Chopin Airport">Warsaw Chopin Airport</option>';
+            name_en_options_str  += '<option value="Washington Dulles International Airport">Washington Dulles International Airport</option>';
+            name_en_options_str  += '<option value="Wattay International Airport">Wattay International Airport</option>';
+            name_en_options_str  += '<option value="Wellington International Airport">Wellington International Airport</option>';
+            name_en_options_str  += '<option value="Wewak Airport">Wewak Airport</option>';
+            name_en_options_str  += '<option value="Wichita Dwight D. Eisenhower National Airport">Wichita Dwight D. Eisenhower National Airport</option>';
+            name_en_options_str  += '<option value="Wien-Schwechat Airport">Wien-Schwechat Airport</option>';
+            name_en_options_str  += '<option value="Wiley Post–Will Rogers Memorial Airport">Wiley Post–Will Rogers Memorial Airport</option>';
+            name_en_options_str  += '<option value="Will Rogers World Airport">Will Rogers World Airport</option>';
+            name_en_options_str  += '<option value="Wilmington International Airport">Wilmington International Airport</option>';
+            name_en_options_str  += '<option value="Windhoek Hosea Kutako International Airport">Windhoek Hosea Kutako International Airport</option>';
+            name_en_options_str  += '<option value="Windsor International Airport">Windsor International Airport</option>';
+            name_en_options_str  += '<option value="Winnipeg James Armstrong Richardson International Airport">Winnipeg James Armstrong Richardson International Airport</option>';
+            name_en_options_str  += '<option value="Wuhan Tianhe International Airport">Wuhan Tianhe International Airport</option>';
+            name_en_options_str  += '<option value="Xi&apos;an Xianyang International Airport">Xi&apos;an Xianyang International Airport</option>';
+            name_en_options_str  += '<option value="Xiamen Gaoqi International Airport">Xiamen Gaoqi International Airport</option>';
+            name_en_options_str  += '<option value="Xoxocotlán International Airport">Xoxocotlán International Airport</option>';
+            name_en_options_str  += '<option value="Yangon International Airport">Yangon International Airport</option>';
+            name_en_options_str  += '<option value="Yangyang International Airport">Yangyang International Airport</option>';
+            name_en_options_str  += '<option value="Yantai Laishan International Airport">Yantai Laishan International Airport</option>';
+            name_en_options_str  += '<option value="Yaoundé Nsimalen International Airport">Yaoundé Nsimalen International Airport</option>';
+            name_en_options_str  += '<option value="Yap International Airport">Yap International Airport</option>';
+            name_en_options_str  += '<option value="Yeager Airport">Yeager Airport</option>';
+            name_en_options_str  += '<option value="Yellowknife Airport">Yellowknife Airport</option>';
+            name_en_options_str  += '<option value="Yenişehir Airport">Yenişehir Airport</option>';
+            name_en_options_str  += '<option value="Zagreb Airport">Zagreb Airport</option>';
+            name_en_options_str  += '<option value="Zahedan Airport">Zahedan Airport</option>';
+            name_en_options_str  += '<option value="Zamboanga International Airport">Zamboanga International Airport</option>';
+            name_en_options_str  += '<option value="Zaporizhzhia International Airport">Zaporizhzhia International Airport</option>';
+            name_en_options_str  += '<option value="Zaria Airport">Zaria Airport</option>';
+            name_en_options_str  += '<option value="Zhengzhou Xinzheng International Airport">Zhengzhou Xinzheng International Airport</option>';
+            name_en_options_str  += '<option value="Zumbi dos Palmares International Airport">Zumbi dos Palmares International Airport</option>';
+            name_en_options_str  += '<option value="Zurich Airport">Zurich Airport</option>';
+            name_en_options_str  += '<option value="Zvartnots International Airport">Zvartnots International Airport</option>';
+            name_en_options_str  += '<option value="Ürümqi Diwopu International Airport">Ürümqi Diwopu International Airport</option>';
+            name_en_options_str  += '<option value="İzmir Adnan Menderes Airport">İzmir Adnan Menderes Airport</option>';
+            name_en_options_str  += '<option value="Łódź Władysław Reymont Airport">Łódź Władysław Reymont Airport</option>';
+            name_en_options_str  += '<option value="Šiauliai International Airport">Šiauliai International Airport</option>';
+            sel_name_en.innerHTML = name_en_options_str;
+            div_name_en.appendChild(sel_name_en);
+            var lab_name_en = document.createElement('div');
+            lab_name_en.innerHTML = 'name_en';
+            lab_name_en.className = 'filterlabel';
+            div_name_en.appendChild(lab_name_en);
+            var reset_name_en = document.createElement('div');
+            reset_name_en.innerHTML = 'clear filter';
+            reset_name_en.className = 'filterlabel';
+            reset_name_en.onclick = function() {
+                var options = document.getElementById("sel_name_en").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_name_en.appendChild(reset_name_en);
+        </script>
+    </body>
+</html>
